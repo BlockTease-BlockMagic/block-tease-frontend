@@ -63,7 +63,8 @@ const Header = () => {
     }
   };
   const getAccount = async () => {
-    const accountAddr = await window.ethereum.enable();
+    const accountAddr =
+      typeof window !== 'undefined' && (await window.ethereum.enable());
     setAccount(accountAddr[0]);
   };
   React.useEffect(() => {

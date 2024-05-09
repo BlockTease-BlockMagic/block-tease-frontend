@@ -6,7 +6,10 @@ import mockUsdAbi from '../constant/MockUSD.json';
 import nftMarketPlaceAbi from '../constant/NftMarketPlace.json';
 import precompileAbi from '../constant/Precompile.json';
 import purchaseSubscriptionAbi from '../constant/PurchaseSubscription.json';
-const provider = new ethers.providers.Web3Provider(window.ethereum);
+let provider: any;
+if (typeof window !== 'undefined') {
+  new ethers.providers.Web3Provider(window.ethereum);
+}
 
 const purchaseSubscriptionAddress =
   '0xF99b791257ab50be7F235BC825E7d4B83942cf38';
