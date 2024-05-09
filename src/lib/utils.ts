@@ -12,7 +12,7 @@ export const toastStyles = {
     color: '#cdb9e8',
   },
   iconTheme: {
-    primary: '#7C40E4',
+    primary: '#281229',
     secondary: '#FFFAEE',
   },
 };

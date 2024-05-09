@@ -1,7 +1,10 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import '@/lib/env';
+
+import BorderGlowButton from '@/components/buttons/shimmerButton';
 
 import firstScreenBg from '../../public/images/firstScreenBg.png';
 import logo from '../../public/images/logo.png';
@@ -18,7 +21,7 @@ export default function HomePage() {
         <div className=' flex flex-col items-center h-full justify-around'>
           <Image src={logo} priority alt='logo' width={300} height={200} />
           <div className='flex flex-col items-center justify-between  gap-10'>
-            <p className='text-xl bg-[rgb(148,60,255)] bg-gradient-to-r from-[#943cff] to-[rgba(251,3,147,1)] bg-clip-text text-transparent text-center'>
+            <p className='text-2xl font-medium bg-[rgb(148,60,255)] bg-gradient-to-r from-[#943cff] to-[rgba(251,3,147,1)] bg-clip-text text-transparent text-center'>
               "Empower your content, <br />
               redefine connection."
             </p>
@@ -28,9 +31,15 @@ export default function HomePage() {
             </p>
             <div className='flex flex-col items-center gap-1'>
               <Image priority src={qr} alt='logo' height={250} width={250} />
-              <p className='text-[#FB0393] font-bold text-sm '>
+              <p className='bg-[rgb(255,255,255)]  bg-gradient-to-r from-[rgba(255,255,255,1)] to-[rgba(255,60,212,1)] bg-clip-text text-transparent text-center font-bold text-lg '>
                 Scan to verify 18+
               </p>
+              <span>or</span>
+              <Link href="feed">
+
+                <BorderGlowButton buttonFor="Skip for now " />
+
+              </Link>
             </div>
           </div>
         </div>

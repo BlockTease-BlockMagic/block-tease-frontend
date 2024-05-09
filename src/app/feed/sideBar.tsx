@@ -6,7 +6,6 @@ import FavoritesIcon from '../../../public/images/FavoritesIcon.png';
 import HelpIcon from '../../../public/images/helpIcon.png';
 import HomeIcon from '../../../public/images/homeIcon.png';
 import LiveIcon from '../../../public/images/liveIcon.png';
-import logo from '../../../public/images/logo.png';
 import RecommendedIcon from '../../../public/images/RecommendedIcon.png';
 import TrendingIcon from '../../../public/images/treandingIcon.png';
 const sideBarContent = [
@@ -51,7 +50,7 @@ const SideBar = () => {
   return (
     <div className=' text-white h-screen flex flex-col items-center w-[20%] py-6 px-10'>
       <div className=' flex flex-col justify-between h-[70%] '>
-        <Image src={logo} priority alt='logo' width={200} height={200} />
+
         <div className='h-[70%] flex flex-col items-center lg:items-start justify-around'>
           {sideBarContent.map((item, index) => (
             <div key={index} className='flex gap-3 items-center '>
