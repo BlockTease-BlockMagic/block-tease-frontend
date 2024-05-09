@@ -53,6 +53,7 @@ export async function mintingNft({ modelId, fromAddr }: minitingNftProps) {
   console.log(txResponse);
   const resp = await txResponse.wait();
   console.log(resp);
+  return { trxHash: resp.transactionHash };
 }
 export async function checkBalances(provider: any) {
   const signer = provider.getSigner();
