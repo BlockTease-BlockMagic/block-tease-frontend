@@ -55,6 +55,15 @@ const Header = () => {
             },
           ],
         });
+        const chainId = await provider.request({
+          method: 'eth_chainId',
+        });
+        // Moonbase Alpha's chainId is 1287, which is 0x507 in hex
+        if (chainId === '0x507') {
+          const accountAddr =
+            typeof window !== 'undefined' && (await window.ethereum.enable());
+          setAccount(accountAddr[0]);
+        }
       } catch (e) {
         console.error(e);
       }
@@ -62,14 +71,6 @@ const Header = () => {
       console.error('Please install MetaMask');
     }
   };
-  const getAccount = async () => {
-    const accountAddr =
-      typeof window !== 'undefined' && (await window.ethereum.enable());
-    setAccount(accountAddr[0]);
-  };
-  React.useEffect(() => {
-    getAccount();
-  }, []);
   return (
     <div className='w-full flex items-center justify-between  p-8 border-b-2 border-b-[#433F48]'>
       <div className='w-[80%] relative'>

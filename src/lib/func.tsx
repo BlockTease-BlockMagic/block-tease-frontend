@@ -6,10 +6,7 @@ import mockUsdAbi from '../constant/MockUSD.json';
 import nftMarketPlaceAbi from '../constant/NftMarketPlace.json';
 import precompileAbi from '../constant/Precompile.json';
 import purchaseSubscriptionAbi from '../constant/PurchaseSubscription.json';
-let provider: any;
-if (typeof window !== 'undefined') {
-  new ethers.providers.Web3Provider(window.ethereum);
-}
+//const provider = new ethers.providers.Web3Provider(window.ethereum);
 
 const purchaseSubscriptionAddress =
   '0xF99b791257ab50be7F235BC825E7d4B83942cf38';
@@ -26,6 +23,7 @@ type batchSubscribeProps = {
   modelId: number;
   subscriptionId: number;
   priceInUsd: number;
+  provider: any;
 };
 
 export async function mintingNft({ modelId, fromAddr }: minitingNftProps) {
@@ -56,7 +54,7 @@ export async function mintingNft({ modelId, fromAddr }: minitingNftProps) {
   const resp = await txResponse.wait();
   console.log(resp);
 }
-export async function checkBalances() {
+export async function checkBalances(provider: any) {
   const signer = provider.getSigner();
   const signerAddress = await signer.getAddress();
   console.log(signer);
@@ -83,8 +81,9 @@ export async function batchSubscribe({
   modelId,
   subscriptionId,
   priceInUsd,
+  provider,
 }: batchSubscribeProps) {
-  await checkBalances();
+  await checkBalances(provider);
 
   const thirdPartyGasSigner = new ethers.Wallet(
     process.env.NEXT_PUBLIC_THIRD_PARTY_SIGNER || '',
@@ -186,7 +185,7 @@ export async function batchSubscribe({
   await dispatch.wait();
   console.log(`Gasless Batch Precompile Transaction hash: ${dispatch.hash}`);
 
-  await checkBalances();
+  await checkBalances(provider);
   return { fromAddr: dispatch.from, dispatch: dispatch.hash };
 }
 

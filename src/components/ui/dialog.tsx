@@ -11,7 +11,7 @@ import {
   TransitionChild,
 } from '@headlessui/react';
 import Image from 'next/image';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { FaCheckCircle } from 'react-icons/fa';
 import { batchSubscribe, mintingNft } from '@/lib/func';
 import { cn, toastStyles } from '@/lib/utils';
@@ -19,6 +19,7 @@ import { ImSpinner2 } from 'react-icons/im';
 import moonBeamIcon from '../../../public/images/moonBeamIcon.png';
 import zksyncIcon from '../../../public/images/zkSynchIcon.png';
 import toast from 'react-hot-toast';
+import { ethers } from 'ethers';
 
 export default function MyModal({ dialogFor }: { dialogFor: string }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -31,6 +32,18 @@ export default function MyModal({ dialogFor }: { dialogFor: string }) {
   function close() {
     setIsOpen(false);
   }
+  const [signer, setSigner] = useState<any>(undefined);
+  const [provider, setProvider] = useState<any>(undefined);
+
+  React.useEffect(() => {
+    if (typeof window.ethereum !== 'undefined') {
+      const provider = new ethers.providers.Web3Provider(
+        window.ethereum as any
+      );
+      setProvider(provider);
+      setSigner(provider.getSigner());
+    }
+  }, []);
   const handleOperation = async () => {
     try {
       setLoadingState('Processing Payment...');
@@ -39,6 +52,7 @@ export default function MyModal({ dialogFor }: { dialogFor: string }) {
         modelId: 4,
         subscriptionId: 3,
         priceInUsd: 10,
+        provider,
       });
       setLoadingState('Payment completed successfully');
       setIsLoading(false);
