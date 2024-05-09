@@ -1,7 +1,7 @@
 import React from 'react';
 
-import MainComponent from '@/app/secondScreen/mainComponent';
-import SideBar from '@/app/secondScreen/sideBar';
+import MainComponent from '@/app/feed/mainComponent';
+import SideBar from '@/app/feed/sideBar';
 
 const page = () => {
   return (

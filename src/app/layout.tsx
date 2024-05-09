@@ -6,6 +6,8 @@ import '@/styles/globals.css';
 import '@/styles/colors.css';
 
 import { siteConfig } from '@/constant/config';
+import { Providers } from '@/redux/tools/Providers';
+import { Toaster } from 'react-hot-toast';
 
 // !STARTERCONF Change these default meta
 // !STARTERCONF Look at @/constant/config to change them
@@ -56,7 +58,10 @@ export default function RootLayout({
 }) {
   return (
     <html>
-      <body>{children}</body>
+      <body>
+        <Toaster position='top-center' reverseOrder={false} />
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

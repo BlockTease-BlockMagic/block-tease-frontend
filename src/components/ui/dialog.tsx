@@ -12,20 +12,54 @@ import {
 } from '@headlessui/react';
 import Image from 'next/image';
 import { useState } from 'react';
-
+import { FaCheckCircle } from 'react-icons/fa';
+import { batchSubscribe, mintingNft } from '@/lib/func';
+import { cn, toastStyles } from '@/lib/utils';
+import { ImSpinner2 } from 'react-icons/im';
 import moonBeamIcon from '../../../public/images/moonBeamIcon.png';
 import zksyncIcon from '../../../public/images/zkSynchIcon.png';
+import toast from 'react-hot-toast';
 
 export default function MyModal({ dialogFor }: { dialogFor: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [walletChosen, setWalletChosen] = useState('');
+  const [loadingState, setLoadingState] = useState<string>('Confirm Payment');
+  const [isLoading, setIsLoading] = useState(false);
   function open() {
     setIsOpen(true);
   }
   function close() {
     setIsOpen(false);
   }
-
+  const handleOperation = async () => {
+    try {
+      setLoadingState('Processing Payment...');
+      setIsLoading(true);
+      const resp = await batchSubscribe({
+        modelId: 4,
+        subscriptionId: 3,
+        priceInUsd: 10,
+      });
+      setLoadingState('Payment completed successfully');
+      setIsLoading(false);
+      toast.success('Payment completed successfully', toastStyles);
+      if (resp.dispatch) {
+        setLoadingState('Mining Personalized NFT...');
+        setIsLoading(true);
+        await mintingNft({
+          modelId: 1,
+          fromAddr: resp.fromAddr,
+        });
+        setLoadingState('NFT minted successfully 🚀');
+        toast.success('Transaction successfull 🚀', toastStyles);
+        setIsLoading(false);
+      }
+    } catch (error) {
+      setIsLoading(false);
+      setLoadingState('Confirm Payment');
+      toast.error('Something went wrong', toastStyles);
+    }
+  };
   return (
     <>
       <Button
@@ -51,16 +85,36 @@ export default function MyModal({ dialogFor }: { dialogFor: string }) {
                 leaveFrom='opacity-100 transform-[scale(100%)]'
                 leaveTo='opacity-0 transform-[scale(95%)]'
               >
-                <DialogPanel className='w-full max-w-xl  space-y-2 rounded-xl bg-white/5 px-10 py-40 backdrop-blur-2xl'>
+                <DialogPanel className='w-full max-w-xl  space-y-2 rounded-xl bg-white/5 p-10 backdrop-blur-2xl'>
                   <h1 className='text-2xl text-white'>Subscribe</h1>
                   <p className='text-white'>
                     Subscribe to get access to exclusive content
                   </p>
 
-                  <div className=' flex items-center gap-4 '>
+                  <div className=' flex items-center gap-4 pb-32'>
+                    <span
+                      className={cn(
+                        'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2'
+                      )}
+                    >
+                      {isLoading && (
+                        <ImSpinner2
+                          className='animate-spin mt-16'
+                          color='white'
+                          size={40}
+                        />
+                      )}
+                      {loadingState === 'NFT minted successfully 🚀' && (
+                        <FaCheckCircle
+                          size={40}
+                          color='white'
+                          className=' mt-16'
+                        />
+                      )}
+                    </span>
                     <Menu>
-                      <MenuButton className='inline-flex z-20 items-center gap-2 rounded-md border-[#FB0393] bg-[#ff16b17c] hover:bg-[#ff16b1a2] py-2 px-10 text-sm/6 font-semibold text-white shadow-inner shadow-white/10 focus:outline-none  data-[open]:bg-[#fb039487] data-[focus]:outline-1 data-[focus]:outline-white'>
-                        {!walletChosen ? 'Choose you wallet' : walletChosen}
+                      <MenuButton className='inline-flex z-20 items-center gap-4 rounded-md border-[#FB0393] bg-[#ff16b17c] hover:bg-[#ff16b1a2] py-2 px-6 text-sm/6 font-semibold text-white shadow-inner shadow-white/10 focus:outline-none  data-[open]:bg-[#fb039487] data-[focus]:outline-1 data-[focus]:outline-white'>
+                        {!walletChosen ? 'Choose you blockchain' : walletChosen}
                         <svg
                           xmlns='http://www.w3.org/2000/svg'
                           fill='none'
@@ -109,8 +163,19 @@ export default function MyModal({ dialogFor }: { dialogFor: string }) {
                       </Transition>
                     </Menu>
 
-                    <p className=' text-white '> 4.99 USD</p>
+                    <p className=' text-white '> 5 USDC</p>
                   </div>
+
+                  <Button
+                    disabled={!walletChosen}
+                    onClick={() => handleOperation()}
+                    className={cn(
+                      `z-20 w-full gap-2 rounded-md border-[#FB0393] bg-[#ff16b17c] hover:bg-[#ff16b1a2] py-2 px-10 text-sm/6 font-semibold text-white shadow-inner shadow-white/10 focus:outline-none  data-[open]:bg-[#fb039487] data-[focus]:outline-1 data-[focus]:outline-white`,
+                      !walletChosen && 'cursor-not-allowed opacity-50 '
+                    )}
+                  >
+                    {loadingState}
+                  </Button>
                 </DialogPanel>
               </TransitionChild>
             </div>

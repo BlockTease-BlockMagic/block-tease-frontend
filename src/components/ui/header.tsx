@@ -1,10 +1,77 @@
+'use client';
+declare global {
+  interface Window {
+    ethereum: any;
+  }
+}
+import { cn } from '@/lib/utils';
+import detectEthereumProvider from '@metamask/detect-provider';
 import React from 'react';
+import { ImSpinner2 } from 'react-icons/im';
+const getButtonCTA = ({
+  isLoading,
+  text,
+}: {
+  isLoading: boolean;
+  text: string;
+}) => {
+  if (isLoading) {
+    return (
+      <span
+        className={cn(
+          'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2'
+        )}
+      >
+        <ImSpinner2 className='animate-spin' />
+      </span>
+    );
+  }
+  return text;
+};
 
-import MyModal from '@/components/ui/dialog';
 const Header = () => {
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [account, setAccount] = React.useState<string | null>(null);
+  const configureMoonbaseAlpha = async () => {
+    const provider: any = await detectEthereumProvider({
+      mustBeMetaMask: true,
+    });
+    if (provider) {
+      try {
+        await provider.request({ method: 'eth_requestAccounts' });
+        await provider.request({
+          method: 'wallet_addEthereumChain',
+          params: [
+            {
+              chainId: '0x507',
+              chainName: 'Moonbase Alpha',
+              nativeCurrency: {
+                name: 'DEV',
+                symbol: 'DEV',
+                decimals: 18,
+              },
+              rpcUrls: ['https://rpc.api.moonbase.moonbeam.network'],
+              blockExplorerUrls: ['https://moonbase.moonscan.io/'],
+            },
+          ],
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    } else {
+      console.error('Please install MetaMask');
+    }
+  };
+  const getAccount = async () => {
+    const accountAddr = await window.ethereum.enable();
+    setAccount(accountAddr[0]);
+  };
+  React.useEffect(() => {
+    getAccount();
+  }, []);
   return (
-    <div className='w-full flex items-center justify-between   py-8 '>
-      <div className='w-[80%] relative '>
+    <div className='w-full flex items-center justify-between  p-8 border-b-2 border-b-[#433F48]'>
+      <div className='w-[80%] relative'>
         <input
           placeholder='Search here'
           className=' text-[#CEB9E9] w-[50%] bg-[#252327] outline-none focus:outline-none rounded-md px-10 '
@@ -25,7 +92,17 @@ const Header = () => {
         </svg>
       </div>
       <div className='w-[20%]'>
-        <MyModal dialogFor='Connect your wallet' />
+        <button
+          onClick={() => configureMoonbaseAlpha()}
+          className='z-30 relative bg-white w-[150px] h-[40px] font-bold rounded-md text-black  py-2'
+        >
+          {getButtonCTA({
+            isLoading: false || false,
+            text: account
+              ? account.slice(0, 4) + '...' + account.slice(4, 7)
+              : 'Connect wallet',
+          })}
+        </button>
       </div>
     </div>
   );
