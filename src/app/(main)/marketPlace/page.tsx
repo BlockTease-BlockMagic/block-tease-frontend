@@ -7,7 +7,7 @@ import CustomizedTables from '@/components/ui/marketPlaceTable';
 import SwiperCoverflow from '@/components/ui/swiper';
 import YourCollection from '@/components/ui/yourCollectionComponent';
 
-import { coinData } from '@/utils/natworkData';
+import { MarketData, coinData } from '@/utils/natworkData';
 
 function Page() {
   const [collection, setCollection] = useState('Your Collection');
@@ -15,7 +15,7 @@ function Page() {
     <div className=' border-l border  flex gap-10 flex-col w-full items-start py-6 overflow-x-hidden'>
       <SwiperCoverflow />
       <div className=' flex static    gap-3 ml-12'>
-        {coinData.map((coin) => {
+        {MarketData.map((coin) => {
           return (
             <button
               className='group/button relative z-40  inline-flex h-10 w-10 items-center gap-4 justify-center overflow-hidden rounded-lg bg-transparent font-medium text-white transition-all duration-300 hover:w-24'

@@ -12,16 +12,19 @@ import toast from 'react-hot-toast';
 
 import useWeb3auth, { chainConfig } from '@/hooks/useWeb3auth';
 import {
-  PurchaseSubsAvaGasslessBundle,
-  PurchaseSubsAmoyGasslessBundle,
   approveNSubscribe,
   batchSubscribeFor,
   chainLinkAutomationSubscription,
-  checkUserBalanceAvaWeb3Auth,
   checkUserBalanceAmoyWeb3Auth,
+  checkUserBalanceAvaWeb3Auth,
   checkUserBalanceWeb3Auth,
+  checkUserBalanceZkevm,
   getTestFundsWeb3Auth,
+  getTestFundsZkEvm,
   mintingNft,
+  PurchaseSubsAmoyGasslessBundle,
+  PurchaseSubsAvaGasslessBundle,
+  purchaseSubscriptionZkevm,
 } from '@/lib/func';
 import { cn, toastStyles } from '@/lib/utils';
 
@@ -34,6 +37,7 @@ import { moonbase, morph } from '@/app/Providers';
 import { coinData } from '@/utils/natworkData';
 
 const subscriptionId = Math.floor(Math.random() * (1e12 - 1 + 1)) + 1;
+
 export default function MyModal({
   setLocked,
   dialogFor,
@@ -54,9 +58,11 @@ export default function MyModal({
   const [batchGaslessTrx, setBatchGaslessTrx] = useState('');
   const [approvetrx, setApproveTrx] = useState('');
   const [Polygontrx, setPolygonTrx] = useState('');
+  const [Cardona, setCardona] = useState('');
   const [avalancheCrossTxn, setAvalancheCrossTxn] = useState('');
   const [chainlinkCrossTxn, setChainLinkCrossTxn] = useState('');
   const [testTokensHash, setTestTokensHash] = useState('');
+  const [testTokensZekEvm, setTestTokensZekEvmHash] = useState('');
   const [polygonTokensHash, setPolygonTokensHash] = useState('');
   const [nftTrx, setNftTrx] = useState('');
   const [progress, setProgress] = React.useState(0);
@@ -148,6 +154,36 @@ export default function MyModal({
       toast.error('Something went wrong', toastStyles);
     }
   };
+
+  const zkEVMNotifier = async () => {
+    try {
+      const resp = await fetch(
+        'https://db-graph-backend.onrender.com/api/purchase-subscription-zkevm',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: email,
+            modelId: modelId,
+            tokenId: (
+              BigInt(1e18) * BigInt(modelId) +
+              BigInt(subscriptionId)
+            ).toString(),
+          }),
+        }
+      );
+      const data = await resp.json();
+      if (data.success) {
+        return true;
+      }
+      return false;
+    } catch (error) {
+      toast.error('Something went wrong', toastStyles);
+    }
+  };
+
   const handleOperation = async (walletChosen: string) => {
     try {
       if (walletChosen === 'Morph') {
@@ -225,6 +261,22 @@ export default function MyModal({
           showMsgs();
           setProgress(100);
         }
+      } else if (walletChosen === 'Polygon_Zkevm') {
+        setProgress(10);
+        console.log(subscriptionId);
+        const resp = await purchaseSubscriptionZkevm(
+          smartAccount,
+          modelId,
+          subscriptionId,
+          value,
+          2592000
+        );
+        if (resp?.hash) {
+          await zkEVMNotifier();
+          setCardona(resp?.hash);
+          showMsgs();
+          setProgress(100);
+        }
       }
     } catch (error) {
       setProgress(0);
@@ -262,6 +314,16 @@ export default function MyModal({
       );
     }
   };
+  const insufficiantZkevmBalance = async () => {
+    const amount = await checkUserBalanceZkevm(smartAccount);
+    if (parseInt(amount.signerBalance) < value) {
+      setLoadingState(
+        `Insufficient Funds need ${
+          value - parseInt(amount.signerBalance)
+        }💸 to subscribe`
+      );
+    }
+  };
 
   React.useEffect(() => {
     if (walletChosen === 'Ethereum') {
@@ -271,8 +333,37 @@ export default function MyModal({
     } else if (walletChosen === 'Polygon') {
       console.log('there?');
       insufficiantAmoyBalance();
+    } else if (walletChosen === 'Polygon_Zkevm') {
+      insufficiantZkevmBalance();
     }
   }, [walletChosen]);
+
+  const paymentSuccessMessage = (walletChosen: string) => {
+    switch (walletChosen) {
+      case 'Ethereum':
+        return 'Autopay Success';
+      case 'avalanche':
+      case 'Polygon':
+        return 'CCIP Payment Success';
+      case 'Polygon_Zkevm':
+        return 'Payment Success';
+      default:
+        return 'Payment Success';
+    }
+  };
+
+  const transactionUrls = {
+    Morph: `${morph.explorerUrl}/tx/${approvetrx}`,
+    avalanche: `https://ccip.chain.link/tx/${avalancheCrossTxn}`,
+    Polygon: `https://ccip.chain.link/tx/${Polygontrx}`,
+    Ethereum: `${chainConfig[1].blockExplorerUrl}/tx/${chainlinkCrossTxn}`,
+    Polygon_Zkevm: `${chainConfig[3].blockExplorerUrl}/tx/${chainlinkCrossTxn}`,
+    default: `${moonbase.explorerUrl}/tx/${batchGaslessTrx}`,
+  };
+
+  const transactionUrl =
+    transactionUrls[walletChosen] || transactionUrls.default;
+
   return (
     <>
       <button
@@ -344,7 +435,6 @@ export default function MyModal({
                         />
                       </span>
                     )}
-
                     <div className='absolute left-1/2 top-[62%] -translate-x-1/2 -translate-y-1/2 w-full'>
                       {(approvetrx ||
                         batchGaslessTrx ||
@@ -360,26 +450,11 @@ export default function MyModal({
                           }  w-full py-3`}
                         >
                           <a
-                            href={
-                              walletChosen === 'Morph'
-                                ? `${morph.explorerUrl}/tx/${approvetrx}`
-                                : walletChosen === 'avalanche'
-                                ? `https://ccip.chain.link/tx/${avalancheCrossTxn}`
-                                : walletChosen === 'Polygon'
-                                ? `https://ccip.chain.link/tx/${Polygontrx}`
-                                : walletChosen === 'Ethereum'
-                                ? `${chainConfig[1].blockExplorerUrl}/tx/${chainlinkCrossTxn}`
-                                : `${moonbase.explorerUrl}/tx/${batchGaslessTrx}`
-                            }
+                            href={transactionUrl}
                             target='_blank'
                             className='flex items-center text-white gap-1 hover:underline'
                           >
-                            {walletChosen === 'Ethereum'
-                              ? 'Autopay Success'
-                              : walletChosen === 'avalanche' ||
-                                walletChosen === 'Polygon'
-                              ? 'CCIP Payment Success'
-                              : ' Payment Success'}
+                            {paymentSuccessMessage(walletChosen)}
                             <svg
                               stroke='currentColor'
                               fill='none'
@@ -435,7 +510,7 @@ export default function MyModal({
                         </div>
                       )}
                       {testTokensHash && (
-                        <div className={'flex items-center w-full'}>
+                        <div className='flex items-center w-full'>
                           <a
                             href={`${chainConfig[1].blockExplorerUrl}/tx/${testTokensHash}`}
                             target='_blank'
@@ -465,8 +540,39 @@ export default function MyModal({
                           </a>
                         </div>
                       )}
+                      {testTokensZekEvm && (
+                        <div className='flex items-center w-full'>
+                          <a
+                            href={`${chainConfig[3].blockExplorerUrl}/tx/${testTokensZekEvm}`}
+                            target='_blank'
+                            className='flex items-center text-white gap-1 hover:underline'
+                          >
+                            Test funds{' '}
+                            <svg
+                              stroke='currentColor'
+                              fill='none'
+                              stroke-width='2'
+                              viewBox='0 0 24 24'
+                              stroke-linecap='round'
+                              stroke-linejoin='round'
+                              height='1em'
+                              width='1em'
+                              xmlns='http://www.w3.org/2000/svg'
+                            >
+                              <path
+                                stroke='none'
+                                d='M0 0h24v24H0z'
+                                fill='none'
+                              ></path>
+                              <path d='M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6'></path>
+                              <path d='M11 13l9 -9'></path>
+                              <path d='M15 4h5v5'></path>
+                            </svg>
+                          </a>
+                        </div>
+                      )}
                       {polygonTokensHash && (
-                        <div className={'flex items-center w-full'}>
+                        <div className='flex items-center w-full'>
                           <a
                             href={`${chainConfig[2].blockExplorerUrl}/tx/${polygonTokensHash}`}
                             target='_blank'
@@ -509,8 +615,9 @@ export default function MyModal({
                                 } else if (coin.name === 'Ethereum') {
                                   login(1);
                                 } else if (coin.name === 'Polygon') {
-                                  console.log('there?');
                                   login(2);
+                                } else if (coin.name === 'Polygon_Zkevm') {
+                                  login(3);
                                 }
                                 setWalletChosen(coin.name);
                                 setLoadingState('Confirm Payment');
@@ -583,6 +690,24 @@ export default function MyModal({
                                   toastStyles
                                 );
                                 setTestTokensHash('');
+                              }
+                            } else if (walletChosen === 'Polygon_Zkevm') {
+                              const resp = await getTestFundsZkEvm(
+                                smartAccount
+                              );
+                              if (resp.trxhash) {
+                                toast.success(
+                                  'Wooho your funds have arrived 🚀🎉💸',
+                                  toastStyles
+                                );
+                                setTestTokensZekEvmHash(resp.trxhash);
+                                setLoadingState('Confirm Payment');
+                              } else {
+                                toast.error(
+                                  'Something went wrong',
+                                  toastStyles
+                                );
+                                setTestTokensZekEvmHash('');
                               }
                             } else {
                               window.open(

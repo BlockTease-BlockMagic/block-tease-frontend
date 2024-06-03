@@ -1,5 +1,6 @@
 'use client';
-import { batchList } from '@/lib/func';
+import useWeb3auth from '@/hooks/useWeb3auth';
+import { listNft } from '@/lib/func';
 import { toastStyles } from '@/lib/utils';
 import {
   Description,
@@ -12,7 +13,6 @@ import {
   TransitionChild,
 } from '@headlessui/react';
 import { clsx } from 'clsx';
-import { ethers } from 'ethers';
 import Image from 'next/image';
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
@@ -20,12 +20,14 @@ type props = {
   icon: any;
   name: string;
   modelId: number;
+  tokenId: string;
 };
-export default function ListingDialog({ icon, name, modelId }: props) {
+export default function ListingDialog({ icon, name, modelId, tokenId }: props) {
   const [isOpen, setIsOpen] = useState(false);
 
   const [listingPrice, setListingPrice] = React.useState<number>(0);
-  const [provider, setProvider] = useState<any>(undefined);
+
+  const { smartAccount, login } = useWeb3auth();
 
   function open() {
     setIsOpen(true);
@@ -33,22 +35,31 @@ export default function ListingDialog({ icon, name, modelId }: props) {
   function close() {
     setIsOpen(false);
   }
-  React.useEffect(() => {
-    if (typeof window.ethereum !== 'undefined') {
-      const provider = new ethers.providers.Web3Provider(
-        window.ethereum as any
-      );
-      setProvider(provider);
-    }
-  }, []);
+
   const handleListing = async () => {
-    const lc = localStorage.getItem(modelId.toString());
     toast.loading('Listing your NFT', toastStyles);
-    const resp = await batchList(provider, lc, listingPrice);
-    if (resp.dispatch) {
-      toast.dismiss();
-      toast.success('NFT listed successfully 🚀', toastStyles);
-      localStorage.removeItem(modelId.toString());
+    login(1);
+    const resp = await listNft(smartAccount, tokenId, listingPrice);
+    if (resp.hash) {
+      const result = await fetch(
+        'https://db-graph-backend.onrender.com/api/list-subscription',
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            tokenId: tokenId,
+            price: listingPrice.toString(),
+            listingId: resp.listingId,
+          }),
+        }
+      );
+      const data = await result.json();
+      if (data.success) {
+        toast.dismiss();
+        toast.success('NFT listed successfully 🚀', toastStyles);
+      }
     } else {
       toast.dismiss();
       toast.success('Something went wrong', toastStyles);
@@ -132,6 +143,7 @@ export default function ListingDialog({ icon, name, modelId }: props) {
                             'mt-3 block w-[80%] rounded-l-lg border border-[#dbd2d2] bg-white/5 py-1.5 px-3 text-sm/6 text-white',
                             'focus:outline-none data-[focus]:outline-2 data-[focus]:-outline-offset-2 data-[focus]:outline-white/25'
                           )}
+                          onChange={(e: any) => setListingPrice(e.target.value)}
                         />
                         <div
                           className={clsx(
