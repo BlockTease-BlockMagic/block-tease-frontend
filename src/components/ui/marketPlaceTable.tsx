@@ -6,15 +6,15 @@ import TableCell, { tableCellClasses } from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import { ethers } from 'ethers';
 import Image from 'next/image';
 import * as React from 'react';
-
-import { BuyNft } from '@/lib/func';
-
-import { IndianModelCardData } from '@/utils/modelData';
-import { toastStyles } from '@/lib/utils';
 import toast from 'react-hot-toast';
+
+import useWeb3auth from '@/hooks/useWeb3auth';
+import { BuyNft } from '@/lib/func';
+import { toastStyles } from '@/lib/utils';
+
+import { allModelData } from '@/utils/modelData';
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
@@ -30,69 +30,81 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({}));
 
-function createData(
-  tokenId: any,
-  id: number,
-  icon: any,
-  name: string,
-  floor: number,
-  floor1d: number,
-  volume: number,
-  TopOffer: number,
-  Sales: number,
-  Listed: number
-) {
-  return {
-    icon,
-    name,
-    floor,
-    floor1d,
-    volume,
-    TopOffer,
-    Sales,
-    Listed,
-    id,
-    tokenId,
-  };
-}
+export default function CustomizedTables({ chain }: { chain: string }) {
+  console.log(chain, 'chan');
 
-const rows = IndianModelCardData.map((model) => {
-  const randomNum = Math.floor(Math.random() * 10) + 1; // Generating a random number between 1 and 100
-  const newListPrice = model.ListPrice - randomNum; // Adding the random number to the original listPrice
-  return createData(
-    model.tokenId,
-    model.id,
-    model.icon,
-    model.name,
-    model.ListPrice,
-    model.value,
-    model.views,
-    newListPrice,
-    model.Tease,
-    model.posts
-  );
-});
-
-export default function CustomizedTables() {
   const [provider, setProvider] = React.useState<any>(undefined);
-  React.useEffect(() => {
-    if (typeof window.ethereum !== 'undefined') {
-      const provider = new ethers.providers.Web3Provider(
-        window.ethereum as any
-      );
-      setProvider(provider);
-    }
-  }, []);
-  const handleBuyNft = async (modelId: any, tokenId: any) => {
-    console.log(localStorage.getItem(modelId) === tokenId);
+
+  const { email, login } = useWeb3auth(2);
+
+  const handleBuyNft = async (modelId: any, tokenId: any, price: any) => {
     toast.loading('Buying NFT', toastStyles);
-    const resp = await BuyNft(provider, tokenId);
-    console.log(resp);
+    const _provider = await login(2);
+    const resp = await BuyNft(_provider, tokenId, price);
+    try {
+      if (chain.toLowerCase() !== 'moonbeam') return;
+      const apiResponse = await fetch(
+        'https://db-graph-backend.onrender.com/api/update-subscription-moonbeam',
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            tokenId,
+            email: email,
+          }),
+        }
+      );
+      const responseData = await apiResponse.json();
+      if (!apiResponse.ok) {
+        throw new Error(responseData.message || 'Failed to purchase NFT');
+      }
+    } catch (error) {
+      toast.dismiss();
+      toast.error('Failed to purchase NFT', toastStyles);
+    }
     if (resp.dispatch) {
+      toast.dismiss();
       toast.success('NFT successfully purchased', toastStyles);
-      localStorage.setItem(modelId, tokenId);
     }
   };
+
+  const [data, setData] = React.useState([]);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (chain.toLowerCase() !== 'moonbeam') {
+          const response = await fetch(
+            'https://db-graph-backend.onrender.com/api/listed-subscriptions'
+          );
+          const jsonData = await response.json();
+          setData(
+            jsonData.data.sort(
+              (a, b) => parseFloat(b.price) - parseFloat(a.price)
+            )
+          );
+          return;
+        }
+        // await login(2)
+        const response = await fetch(
+          'https://db-graph-backend.onrender.com/api/listed-subscriptions-moonbeam'
+        );
+        const jsonData = await response.json();
+        setData(
+          jsonData.data.sort(
+            (a, b) => parseFloat(b.price) - parseFloat(a.price)
+          )
+        );
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    fetchData();
+  }, [chain]);
+
   return (
     <TableContainer
       component={Paper}
@@ -116,80 +128,86 @@ export default function CustomizedTables() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {rows.map((row) => (
-            <StyledTableRow key={row.name}>
-              <StyledTableCell component='th' scope='row'>
-                <Image
-                  src={row.icon}
-                  className='w-10 h-10 rounded-full'
-                  alt='modelIcon'
-                />
-              </StyledTableCell>
-              <StyledTableCell component='th' scope='row'>
-                <div className='flex items-center  gap-2 '>
-                  {row.name}
-                  <svg
-                    onClick={() =>
-                      localStorage.getItem(row.id.toString()) !== row.tokenId &&
-                      handleBuyNft(row.id, row.tokenId)
-                    }
-                    xmlns='http://www.w3.org/2000/svg'
-                    fill='none'
-                    viewBox='0 0 24 24'
-                    strokeWidth={1.5}
-                    stroke='currentColor'
-                    className={`${
-                      localStorage.getItem(row.id.toString()) !== row.tokenId
-                        ? 'cursor-not-allowed'
-                        : 'cursor-pointer'
-                    }' hover:text-fuchsia-600 w-5 h-5'`}
-                  >
-                    <path
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                      d='M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'
-                    />
-                  </svg>
-                </div>
-              </StyledTableCell>
+          {data.map((row) => {
+            const modelData = allModelData.filter(
+              (item) => item.id.toString() === row.model.modelId
+            )[0];
 
-              <StyledTableCell align='right'>
-                {row.floor}
-                <span className='text-slate-400'>USDC</span>
-              </StyledTableCell>
-              <StyledTableCell align='right'>
-                <span className='text-green-500 items-center flex  justify-end gap-1'>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    fill='none'
-                    viewBox='0 0 24 24'
-                    strokeWidth={1.5}
-                    stroke='currentColor'
-                    className='w-4 h-4'
-                  >
-                    <path
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                      d='M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941'
-                    />
-                  </svg>
-                  {row.floor1d} %
-                </span>
-              </StyledTableCell>
-              <StyledTableCell align='right'>
-                {row.volume}
-                <span className='text-slate-400'>USDC</span>
-              </StyledTableCell>
-              <StyledTableCell align='right'>
-                {row.TopOffer} USDC
-              </StyledTableCell>
-              <StyledTableCell align='right'>{row.Sales}</StyledTableCell>
-              <StyledTableCell align='right'>{row.Listed}%</StyledTableCell>
-            </StyledTableRow>
-          ))}
+            if (!modelData) return null;
+            return (
+              <StyledTableRow key={modelData.id}>
+                <StyledTableCell component='th' scope='row'>
+                  <Image
+                    src={modelData.icon}
+                    className='w-10 h-10 rounded-full'
+                    alt='modelIcon'
+                  />
+                </StyledTableCell>
+                <StyledTableCell component='th' scope='row'>
+                  <div className='flex items-center  gap-2 '>
+                    {modelData.name}
+                    <svg
+                      onClick={() =>
+                        handleBuyNft(modelData.id, row.tokenId, row.price)
+                      }
+                      xmlns='http://www.w3.org/2000/svg'
+                      fill='none'
+                      viewBox='0 0 24 24'
+                      strokeWidth={1.5}
+                      stroke='currentColor'
+                      className={`${
+                        localStorage.getItem(modelData.id.toString()) !==
+                        modelData.tokenId
+                          ? 'cursor-not-allowed'
+                          : 'cursor-pointer'
+                      }' hover:text-fuchsia-600 w-5 h-5'`}
+                    >
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        d='M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'
+                      />
+                    </svg>
+                  </div>
+                </StyledTableCell>
+                <StyledTableCell align='right'>
+                  {parseInt(row.price)}
+                  <span className='text-slate-400'>USDC</span>
+                </StyledTableCell>
+                <StyledTableCell align='right'>
+                  <span className='text-green-500 items-center flex  justify-end gap-1'>
+                    <svg
+                      xmlns='http://www.w3.org/2000/svg'
+                      fill='none'
+                      viewBox='0 0 24 24'
+                      strokeWidth={1.5}
+                      stroke='currentColor'
+                      className='w-4 h-4'
+                    >
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        d='M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941'
+                      />
+                    </svg>
+                    {/* {row.floor1d} % */}
+                    "---"
+                  </span>
+                </StyledTableCell>
+                <StyledTableCell align='right'>
+                  {modelData.views}
+                  <span className='text-slate-400'>K</span>
+                </StyledTableCell>
+                <StyledTableCell align='right'>
+                  {parseInt(row.price) - 0.2} USDC
+                </StyledTableCell>
+                <StyledTableCell align='right'>--</StyledTableCell>
+                <StyledTableCell align='right'>100%</StyledTableCell>
+              </StyledTableRow>
+            );
+          })}
         </TableBody>
       </Table>
-      {/* <div onClick={handleBuyNft}>Buy</div> */}
     </TableContainer>
   );
 }

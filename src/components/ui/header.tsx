@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { ImSpinner2 } from 'react-icons/im';
 import { IoMdPower } from 'react-icons/io';
 
+import useGlobalStore from '@/hooks/useGlobalStore';
 import useWeb3auth from '@/hooks/useWeb3auth';
 import { userOnBoarding } from '@/lib/func';
 import { cn, toastStyles } from '@/lib/utils';
@@ -14,7 +15,6 @@ import { cn, toastStyles } from '@/lib/utils';
 import Avatar from '@/components/ui/avatar';
 
 import logo from '../../../public/images/logoWithoutGradient.png';
-import useGlobalStore from '@/hooks/useGlobalStore';
 const getButtonCTA = ({
   isLoading,
   text,
@@ -41,9 +41,18 @@ type props = {
 };
 
 const Header = ({ isOpen, setIsOpen }: props) => {
-  const { login, loggedIn, logout, name, provider, email, smartAccount } =
-    useWeb3auth();
-  const { smartAddress } = useGlobalStore();
+  const { walletAddress: smartAddress } = useGlobalStore();
+
+  const {
+    login,
+    loggedIn,
+    logout,
+    name,
+    provider,
+    email,
+    getUserInfo,
+    smartAccount,
+  } = useWeb3auth();
   const [openAiId, setOpenAiId] = useState('');
   const [ipfsUrl, setIpfsUrl] = useState('');
   const [avatarLoading, setAvatarLoading] = useState(false);
@@ -100,7 +109,7 @@ const Header = ({ isOpen, setIsOpen }: props) => {
             );
             const data = await reps.json();
             if (data.success) {
-              fetchUserDetails(smartAddress || '');
+              fetchUserDetails(smartAddress || '', email);
             }
           }
         }
@@ -120,11 +129,12 @@ const Header = ({ isOpen, setIsOpen }: props) => {
         toast.success('Something went wrong', toastStyles);
       });
   };
-  const fetchUserDetails = async (address: string) => {
+  const fetchUserDetails = async (address: string, email: string) => {
     try {
       setAvatarLoading(true);
+      if (!email) return;
       const resp = await fetch(
-        `https://db-graph-backend.onrender.com/api/user-info?wallet_address=${address}`,
+        `https://db-graph-backend.onrender.com/api/user-info-moonbeam?email=${email}`,
         {
           method: 'GET',
         }
@@ -144,14 +154,16 @@ const Header = ({ isOpen, setIsOpen }: props) => {
       toast.error('Something went wrong', toastStyles);
     }
   };
+
   useEffect(() => {
     // if (loggedIn && name && localStorage.getItem(name) === null) {
     //   fetchNft();
     // }
-    if (smartAddress) {
-      fetchUserDetails(smartAddress);
+    if (smartAddress && email && name) {
+      fetchUserDetails(smartAddress, email);
     }
-  }, [smartAddress]);
+  }, [smartAddress, email, name]);
+
   return (
     <div className='w-full flex items-center justify-between bg-[#130D1A] px-6 py-4 lg:py-6 fixed top-0 z-50'>
       <div className='text-white lg:hidden'>

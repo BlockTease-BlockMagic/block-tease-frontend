@@ -2,17 +2,21 @@ import { BiconomySmartAccountV2 } from '@biconomy/account';
 import { create } from 'zustand';
 
 interface GlobalStore {
-  smartAccount: BiconomySmartAccountV2 | null;
-  setSmartAccount: (smartAccount: BiconomySmartAccountV2) => void;
-  smartAddress: string | null;
-  setSmartAddress: (smartAccount: string | null) => void;
+  walletAddress: string | null,
+  smartAccount: BiconomySmartAccountV2 | null
+  setSmartAccount: (smartAccount: BiconomySmartAccountV2) => void
+  setWalletAddress: (address: string) => void
 }
 
-const useGlobalStore = create<GlobalStore>()((set) => ({
-  smartAccount: null,
-  setSmartAccount: (smartAccount) => set({ smartAccount: smartAccount }),
-  smartAddress: null,
-  setSmartAddress: (smartAddress) => set({ smartAddress: smartAddress }),
-}));
+const useGlobalStore = create<GlobalStore>()(
+  (set) => ({
+    walletAddress: null,
+    setWalletAddress: (newAddress) => set({
+      walletAddress: newAddress
+    }),
+    smartAccount: null,
+    setSmartAccount: (smartAccount) => set({ smartAccount: smartAccount }),
+  }),
+)
 
 export default useGlobalStore;

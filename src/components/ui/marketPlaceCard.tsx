@@ -8,10 +8,12 @@ const MarketPlaceCard = ({
   modelName,
   modelId,
   ipfsUrl,
+  tokenId,
 }: {
   modelName: string;
   modelId: string;
   ipfsUrl: string;
+  tokenId: string
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [teaseData, setTeaseData] = useState({
@@ -125,6 +127,7 @@ const MarketPlaceCard = ({
           <ListingDialog
             icon={teaseData.image}
             name={modelName}
+            tokenId={tokenId}
             modelId={parseInt(modelId)}
           />
         </motion.div>

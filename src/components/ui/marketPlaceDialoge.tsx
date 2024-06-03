@@ -1,6 +1,4 @@
 'use client';
-import { batchList } from '@/lib/func';
-import { toastStyles } from '@/lib/utils';
 import {
   Description,
   Dialog,
@@ -16,14 +14,19 @@ import { ethers } from 'ethers';
 import Image from 'next/image';
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
+
+import useWeb3auth from '@/hooks/useWeb3auth';
+import { batchList } from '@/lib/func';
+import { toastStyles } from '@/lib/utils';
 type props = {
   icon: any;
   name: string;
+  tokenId: string;
   modelId: number;
 };
-export default function ListingDialog({ icon, name, modelId }: props) {
+export default function ListingDialog({ icon, name, modelId, tokenId }: props) {
   const [isOpen, setIsOpen] = useState(false);
-
+  const { login } = useWeb3auth(2)
   const [listingPrice, setListingPrice] = React.useState<number>(0);
   const [provider, setProvider] = useState<any>(undefined);
 
@@ -42,16 +45,38 @@ export default function ListingDialog({ icon, name, modelId }: props) {
     }
   }, []);
   const handleListing = async () => {
-    const lc = localStorage.getItem(modelId.toString());
-    toast.loading('Listing your NFT', toastStyles);
-    const resp = await batchList(provider, lc, listingPrice);
-    if (resp.dispatch) {
+    try {
+      const _provider = await login(2)
+      if (!_provider) {
+        throw new Error("Provider not initialized")
+      }
+      toast.loading('Listing your NFT', toastStyles);
+      const resp = await batchList(_provider, tokenId, listingPrice);
+      // API CALL
+      const req = await fetch(`https://db-graph-backend.onrender.com/api/list-subscription-moonbeam`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          "tokenId": tokenId,
+          "price": listingPrice
+        })
+      });
+      const response = await req.json()
+
+      if (resp.dispatch) {
+        toast.dismiss();
+        toast.success('NFT listed successfully 🚀', toastStyles);
+        // localStorage.removeItem(modelId.toString());
+      } else {
+        toast.dismiss();
+        toast.error('Something went wrong', toastStyles);
+      }
+    } catch (error) {
       toast.dismiss();
-      toast.success('NFT listed successfully 🚀', toastStyles);
-      localStorage.removeItem(modelId.toString());
-    } else {
-      toast.dismiss();
-      toast.success('Something went wrong', toastStyles);
+      console.error(error)
+      toast.error('Something went wrong', toastStyles);
     }
   };
   return (
@@ -128,6 +153,9 @@ export default function ListingDialog({ icon, name, modelId }: props) {
                         <Input
                           type='number'
                           placeholder='Amount'
+                          onChange={(e) => {
+                            setListingPrice(e.target.value)
+                          }}
                           className={clsx(
                             'mt-3 block w-[80%] rounded-l-lg border border-[#dbd2d2] bg-white/5 py-1.5 px-3 text-sm/6 text-white',
                             'focus:outline-none data-[focus]:outline-2 data-[focus]:-outline-offset-2 data-[focus]:outline-white/25'
@@ -167,7 +195,6 @@ export default function ListingDialog({ icon, name, modelId }: props) {
                       </div>
                     </Field>
                   </div>
-
                   <button
                     className=' cursor-pointer h-[37px] w-full group/button relative overflow-hidden rounded-md bg-[rgb(48,20,47)] bg-gradient-to-br from-[rgba(48,20,47,1)] from-[0%] to-[rgba(17,12,23,1)] to-[57%] px-5 py-1.5 text-xs font-medium text-[#CEB9E9] transition-all hover:border-red-500 active:scale-95'
                     onClick={handleListing}

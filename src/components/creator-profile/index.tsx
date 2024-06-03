@@ -1,8 +1,11 @@
 'use client';
-import { ethers } from 'ethers';
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 
-import { balanceOffModel, getModalPayment } from '@/lib/func';
+import useGlobalStore from '@/hooks/useGlobalStore';
+import useWeb3auth from '@/hooks/useWeb3auth';
+import { getModalPayment } from '@/lib/func';
+import { toastStyles } from '@/lib/utils';
 
 import ModelBanner from '@/app/(main)/profile/(components)/banner';
 import ModelFeed from '@/app/(main)/profile/(components)/feed';
@@ -10,27 +13,23 @@ import RightSideBar from '@/app/(main)/profile/(components)/rightSideBar';
 import { Props } from '@/app/(main)/profile/[id]/page';
 import NotFound from '@/app/not-found';
 import { allModelData } from '@/utils/modelData';
-import useWeb3auth from '@/hooks/useWeb3auth';
-import toast from 'react-hot-toast';
-import { toastStyles } from '@/lib/utils';
-import useGlobalStore from '@/hooks/useGlobalStore';
 const CreatorProfile = ({ params }: Props) => {
   const [modelFees, setModelFees] = useState<number>(0);
   const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
   const modelData = allModelData.filter((item) => item.slug === params.id)[0];
-  const { address } = useWeb3auth();
+  const { address, email } = useWeb3auth();
 
   const fetchModalFees = async () => {
     const data = await getModalPayment(modelData.id);
 
     setModelFees(parseInt(data));
   };
-  const fetchStatus = async (address: string) => {
+  const fetchStatus = async (address: string, email: string) => {
     // const res = await balanceOffModel(provider, modelData.id.toString());
     // setIsUnlocked(res);
     try {
       const resp = await fetch(
-        `https://db-graph-backend.onrender.com/api/user-info?wallet_address=${address}`,
+        `https://db-graph-backend.onrender.com/api/user-info-moonbeam?email=${email}`,
         {
           method: 'GET',
         }
@@ -50,13 +49,13 @@ const CreatorProfile = ({ params }: Props) => {
       toast.error('Something went wrong', toastStyles);
     }
   };
-  const { smartAddress } = useGlobalStore();
+  const { walletAddress } = useGlobalStore();
   React.useEffect(() => {
-    if (smartAddress) {
-      fetchStatus(smartAddress);
+    if (walletAddress && email) {
+      fetchStatus(walletAddress, email);
     }
     fetchModalFees();
-  }, []);
+  }, [email, walletAddress]);
 
   if (!modelData) return <NotFound />;
   return (

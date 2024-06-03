@@ -1,22 +1,24 @@
 // import { MockUSDABI, PurchaseSubscriptionABI, BatchABI } from '@/constant/abi';
+import { PaymasterMode } from '@biconomy/account';
 import { ethers } from 'ethers';
 
-import { moonbase } from '@/app/Providers';
-import userOnBoardingAbi from '../constant/userOnBoarding.json';
+import { chainConfig } from '@/hooks/useWeb3auth';
+
 import batchAbi from '../constant/Batch.json';
-import mockUsdAbi from '../constant/MockUSD.json';
-import purchaseSubsAvaAbi from '../constant/purchaseSubsAva.json';
+import nftAutomationAbi from '../constant/MarketplaceAutomation.json';
+import {
+  default as mockUsdAbi,
+  default as UsdcEthSepoliaAbi,
+} from '../constant/MockUSD.json';
 import nftAbi from '../constant/nft.json';
 import nftMarketPlaceSepoliaAbi from '../constant/NftMarketPlaceSepolia.json';
 import NftsMarketPlaceMoonAbi from '../constant/nftsMarketPlaceAbi.json';
 import precompileAbi from '../constant/Precompile.json';
+import purchaseSubsAvaAbi from '../constant/purchaseSubsAva.json';
 import purchaseSubscriptionAbi from '../constant/PurchaseSubscription.json';
-import nftAutomationAbi from '../constant/MarketplaceAutomation.json';
 //const provider = new ethers.providers.Web3Provider(window.ethereum);
 import UsdcAvaAbi from '../constant/usdcAva.json';
-import UsdcEthSepoliaAbi from '../constant/MockUSD.json';
-import { BiconomySmartAccountV2, PaymasterMode } from '@biconomy/account';
-import { chainConfig } from '@/hooks/useWeb3auth';
+import userOnBoardingAbi from '../constant/userOnBoarding.json';
 const nftAutomationAddr = '0xD8D9E346Ad32D1f56bC5Fc959440D0A3A2118981';
 const usdcSepoliaEthAddr = '0x9d24c52916A14afc31D86B5Aa046b252383ee444';
 const purchaseSubscriptionAddress =
@@ -30,9 +32,11 @@ const mockUsdAddress = '0xf7409b94F7285d27Ab1A456638A1110A4E55bFEC';
 const userOnboardingAddress = '0x82376dA85a76360BC9FfC9a542961429A2A653ff';
 const batchAddress = '0x0000000000000000000000000000000000000808';
 const precompileAddress = '0x000000000000000000000000000000000000080a';
-const nftMarketPlaceAddrMoon = '0x8208834c529664385fd2CA735EFB64a41d79823b';
+// const nftMarketPlaceAddrMoon = '0xc96b21eDA35A43eFfc57d459688e066315106f59';
+const nftMarketPlaceAddrMoon = '0xA524319d310fa96AAf6E25F8af729587C2DEaE8a';
 const nftMarketPlaceAddrSepolia = '0xc36B6BFa0ce8C6bdD8efcCd23CeC2E425768f64a';
 const nft = '0x12B77FEb2c44dC16d57d96a1FedEd3136Ad02FBB';
+
 type minitingNftProps = {
   modelId: number;
   fromAddr: string;
@@ -43,7 +47,7 @@ type batchSubscribeProps = {
   modelId: number;
   subscriptionId: number;
   priceInUsd: number;
-  provider: any;
+  provider: ethers.providers.JsonRpcProvider;
 };
 type approveNSubscribeProps = {
   priceInUsd: number;
@@ -86,12 +90,9 @@ export async function mintingNft({
   console.log(resp);
   return { trxHash: resp.transactionHash };
 }
-export async function checkBalances(provider: any) {
-  const signer = provider.getSigner();
+export async function checkBalances(signer: any) {
   const signerAddress = await signer.getAddress();
-  console.log(signer);
-  const mockUsd = new ethers.Contract(mockUsdAddress, mockUsdAbi, provider);
-
+  const mockUsd = new ethers.Contract(mockUsdAddress, mockUsdAbi, signer);
   const subscriptionBalance = ethers.utils.formatUnits(
     await mockUsd.balanceOf(nftMarketPlaceAddrMoon),
     8
@@ -226,13 +227,12 @@ export async function batchSubscribeFor({
   priceInUsd,
   provider,
 }: batchSubscribeProps) {
-  await checkBalances(provider);
-
+  const signer = provider.getSigner();
+  await checkBalances(signer);
   const thirdPartyGasSigner = new ethers.Wallet(
     process.env.NEXT_PUBLIC_THIRD_PARTY_SIGNER || '',
     provider
   );
-  console.log(thirdPartyGasSigner);
   const domain = {
     name: 'Call Permit Precompile',
     version: '1',
@@ -250,8 +250,6 @@ export async function batchSubscribeFor({
       { name: 'deadline', type: 'uint256' },
     ],
   };
-  const signer = provider.getSigner();
-
   const userSigner = signer.getAddress();
   const mockUsd = new ethers.Contract(mockUsdAddress, mockUsdAbi, signer);
   //1 -> replace purchase subs with nft marketplace
@@ -322,7 +320,7 @@ export async function batchSubscribeFor({
   await dispatch.wait();
   console.log(`Gasless Batch Precompile Transaction hash: ${dispatch.hash}`);
 
-  await checkBalances(provider);
+  await checkBalances(signer);
   return { fromAddr: dispatch.from, dispatch: dispatch.hash };
 }
 //apporve on morphs and subscribe
@@ -410,7 +408,7 @@ export async function getTestFunds(provider: any) {
     mockUsdAbi,
     thirdPartyProvider
   );
-  const trx = await mockUsd.transfer(signerAddress, 1000e8);
+  const trx = await mockUsd.transfer(signerAddress, 100e8);
   return { trxhash: trx.hash };
 }
 export async function getTestFundsWeb3Auth(smartAccount: any) {
@@ -449,7 +447,8 @@ export async function batchList(
   tokenId: string | null,
   priceInUsd: number
 ) {
-  await checkBalances(provider);
+  const signer = provider.getSigner();
+  await checkBalances(signer);
   const thirdPartyGasSigner = new ethers.Wallet(
     process.env.NEXT_PUBLIC_THIRD_PARTY_SIGNER || '',
     provider
@@ -472,9 +471,7 @@ export async function batchList(
       { name: 'deadline', type: 'uint256' },
     ],
   };
-  const signer = provider.getSigner();
-
-  const userSigner = signer.getAddress();
+  const userSigner = await signer.getAddress();
   const listNft = new ethers.Contract(nft, nftAbi, signer);
   const nftMarketPlace = new ethers.Contract(
     nftMarketPlaceAddrMoon,
@@ -543,17 +540,16 @@ export async function batchList(
   console.log(dispatch);
   console.log(`Gasless Batch Precompile Transaction hash: ${dispatch.hash}`);
 
-  await checkBalances(provider);
+  await checkBalances(signer);
   return { fromAddr: dispatch.from, dispatch: dispatch.hash };
 }
-export async function BuyNft(provider: any, tokenId: any) {
-  console.log(tokenId);
-  await checkBalances(provider);
+export async function BuyNft(provider: any, tokenId: any, price: any) {
+  const signer = provider.getSigner();
+  await checkBalances(signer);
   const thirdPartyGasSigner = new ethers.Wallet(
     process.env.NEXT_PUBLIC_THIRD_PARTY_SIGNER || '',
     provider
   );
-  console.log(thirdPartyGasSigner);
   const domain = {
     name: 'Call Permit Precompile',
     version: '1',
@@ -571,9 +567,8 @@ export async function BuyNft(provider: any, tokenId: any) {
       { name: 'deadline', type: 'uint256' },
     ],
   };
-  const signer = provider.getSigner();
 
-  const userSigner = signer.getAddress();
+  const userSigner = await signer.getAddress();
   const mockUsd = new ethers.Contract(mockUsdAddress, mockUsdAbi, signer);
   //1 -> replace purchase subs with nft marketplace
   const nftMarketPlace = new ethers.Contract(
@@ -581,18 +576,12 @@ export async function BuyNft(provider: any, tokenId: any) {
     NftsMarketPlaceMoonAbi,
     signer
   );
+  const scaledDownPrice = ethers.utils.parseUnits(price, 8);
+
   const batch = new ethers.Contract(batchAddress, batchAbi, signer);
-  const listingPrice = new ethers.Contract(
-    nftMarketPlaceAddrMoon,
-    NftsMarketPlaceMoonAbi,
-    thirdPartyGasSigner
-  );
-  const resp = await listingPrice.listings('4000000496299419492');
-  const price = await resp.price;
-  console.log(price);
   const approvalCallData = mockUsd.interface.encodeFunctionData('approve', [
     nftMarketPlaceAddrMoon,
-    price,
+    scaledDownPrice,
   ]);
   const buyNFT = nftMarketPlace.interface.encodeFunctionData(
     'buyNFTWithUSDC', //puracseSubscrition call this
@@ -645,8 +634,7 @@ export async function BuyNft(provider: any, tokenId: any) {
 
   await dispatch.wait();
   console.log(`Gasless Batch Precompile Transaction hash: ${dispatch.hash}`);
-
-  await checkBalances(provider);
+  await checkBalances(signer);
   return { fromAddr: dispatch.from, dispatch: dispatch.hash };
 }
 // export async function userOnBoarding(provider: any, name: string | undefined) {
@@ -867,9 +855,11 @@ export async function chainLinkAutomationSubscription(
   try {
     const usdcContractAddress = usdcSepoliaEthAddr;
     const purchaseSubAddress = nftAutomationAddr;
+
     const provider = new ethers.providers.JsonRpcProvider(
       'https://eth-sepolia.public.blastapi.io'
     );
+
     console.log('Provider initialized');
 
     const usdcContractInstance = new ethers.Contract(
