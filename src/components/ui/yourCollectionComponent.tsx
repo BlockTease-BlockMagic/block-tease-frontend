@@ -10,7 +10,7 @@ const YourCollection = () => {
   const filterMatchingIds = (array1: any, array2: any) => {
     const filteredArray = array1.filter((item1: any) => {
       return array2.some((item2: any) => {
-        return item1.modelId === item2.id.toString();
+        return item1.modelId === item2.id.toString() && !item1.isListed;
       });
     });
 

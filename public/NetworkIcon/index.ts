@@ -4,6 +4,7 @@ import meticIcon from 'public/NetworkIcon/metisdao-metis-logo.png';
 import moonbeamIcon from 'public/NetworkIcon/moonbeam-glmr-logo.png';
 import morphIcon from 'public/NetworkIcon/mrph-morpheusnetwork.png';
 import polygonIcon from 'public/NetworkIcon/polygon-matic-logo.png';
+import PolygonZkevm from 'public/NetworkIcon/zkevm.png';
 import zksyncIcon from 'public/NetworkIcon/zksync-logo.png';
 
 export {
@@ -14,4 +15,5 @@ export {
   morphIcon,
   polygonIcon,
   zksyncIcon,
+  PolygonZkevm,
 };

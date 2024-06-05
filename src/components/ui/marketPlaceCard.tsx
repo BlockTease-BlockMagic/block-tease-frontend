@@ -8,10 +8,12 @@ const MarketPlaceCard = ({
   modelName,
   modelId,
   ipfsUrl,
+  tokenId,
 }: {
   modelName: string;
   modelId: string;
   ipfsUrl: string;
+  tokenId: string;
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [teaseData, setTeaseData] = useState({
@@ -126,6 +128,7 @@ const MarketPlaceCard = ({
             icon={teaseData.image}
             name={modelName}
             modelId={parseInt(modelId)}
+            tokenId={tokenId}
           />
         </motion.div>
       </div>

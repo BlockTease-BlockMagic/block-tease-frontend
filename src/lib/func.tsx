@@ -1,23 +1,32 @@
 // import { MockUSDABI, PurchaseSubscriptionABI, BatchABI } from '@/constant/abi';
+import { PaymasterMode } from '@biconomy/account';
 import { ethers } from 'ethers';
 
-import { moonbase } from '@/app/Providers';
-import userOnBoardingAbi from '../constant/userOnBoarding.json';
+import { chainConfig } from '@/hooks/useWeb3auth';
+
 import batchAbi from '../constant/Batch.json';
-import mockUsdAbi from '../constant/MockUSD.json';
-import purchaseSubsAvaAbi from '../constant/purchaseSubsAva.json';
-import purchaseSubsAmoyAbi from '../constant/PurchaseSubscriptionAmoy.json';
+import blockTeaseNftAbi from '../constant/blockTeaseNft.json';
+import nftAutomationAbi from '../constant/MarketplaceAutomation.json';
+import {
+  default as mockUsdAbi,
+  default as UsdcEthSepoliaAbi,
+} from '../constant/MockUSD.json';
 import nftAbi from '../constant/nft.json';
 import nftMarketPlaceSepoliaAbi from '../constant/NftMarketPlaceSepolia.json';
 import NftsMarketPlaceMoonAbi from '../constant/nftsMarketPlaceAbi.json';
 import precompileAbi from '../constant/Precompile.json';
+import purchaseSubsAvaAbi from '../constant/purchaseSubsAva.json';
 import purchaseSubscriptionAbi from '../constant/PurchaseSubscription.json';
-import nftAutomationAbi from '../constant/MarketplaceAutomation.json';
+import purchaseSubsAmoyAbi from '../constant/PurchaseSubscriptionAmoy.json';
 //const provider = new ethers.providers.Web3Provider(window.ethereum);
 import UsdcAvaAbi from '../constant/usdcAva.json';
-import UsdcEthSepoliaAbi from '../constant/MockUSD.json';
-import { BiconomySmartAccountV2, PaymasterMode } from '@biconomy/account';
-import { chainConfig } from '@/hooks/useWeb3auth';
+import userOnBoardingAbi from '../constant/userOnBoarding.json';
+import blockTeaseNftZkevmAbi from '../constant/Zkevm/blockTeaseNftZkevm.json';
+import markeplaceZkevmAbi from '../constant/Zkevm/marketplaceZkevm.json';
+import mUsdZkevmAbi from '../constant/Zkevm/mUsdZkevm.json';
+const mUsdZkevmAddr = '0x3FA6cfdC28Ad346c4360AA0543b5BfdA551c7111';
+const blockTeaseNftZkevmAddr = '0x5192Ffbc96b2E731649714B7b51d4cC4CA1fAB8F';
+const marketplaceZkevmAddr = '0x054ba199Ef61ef15226e2CeB61138f7d5E2F8408';
 const nftAutomationAddr = '0x87555010E191072421d4f4B14E75FB59abE778B0';
 const usdcSepoliaEthAddr = '0x9d24c52916A14afc31D86B5Aa046b252383ee444';
 const purchaseSubscriptionAddress =
@@ -26,6 +35,7 @@ const purchaseSubscriptionAddressMorph =
   '0xF99b791257ab50be7F235BC825E7d4B83942cf38';
 const purchaseSubsAva = '0xf6b6A9EFAFd008b1170D703C32Fe32C0dA92fc2F';
 const purhcaseSubsAmoy = '0xa52309ed1de8781cbeecef9d05b4b09b209b2493';
+const blockTeaseNftAddr = '0xc96b21eDA35A43eFfc57d459688e066315106f59';
 // const usdcAvaAddr = '0x6F3c4787bAB4EeEbf62eFB8C35Dc9259FDc9D9f4';
 const usdcAvaAddr = '0x5425890298aed601595a70AB815c96711a31Bc65';
 const usdcAmoyAddr = '0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582';
@@ -387,7 +397,7 @@ export async function checkUserBalanceWeb3Auth(smartAccount: any) {
   const provider = new ethers.providers.JsonRpcProvider(
     'https://eth-sepolia.public.blastapi.io'
   );
-  const signerAddress = await smartAccount.getAddress();
+  const signerAddress = await smartAccount.getAccountAddress();
   const usdc = new ethers.Contract(
     usdcSepoliaEthAddr,
     UsdcEthSepoliaAbi,
@@ -404,7 +414,7 @@ export async function checkUserBalanceAvaWeb3Auth(smartAccount: any) {
   const provider = new ethers.providers.JsonRpcProvider(
     'https://rpc.ankr.com/avalanche_fuji'
   );
-  const signerAddress = await smartAccount.getAddress();
+  const signerAddress = await smartAccount.getAccountAddress();
   const usdc = new ethers.Contract(usdcAvaAddr, UsdcAvaAbi, provider);
   const signerBalance = ethers.utils.formatUnits(
     await usdc.balanceOf(signerAddress),
@@ -414,15 +424,28 @@ export async function checkUserBalanceAvaWeb3Auth(smartAccount: any) {
   return { signerBalance };
 }
 //check user balance with amoy
+export async function checkUserBalanceZkevm(smartAccount: any) {
+  const provider = new ethers.providers.JsonRpcProvider(
+    'https://rpc.cardona.zkevm-rpc.com'
+  );
+  const signerAddress = await smartAccount.getAccountAddress();
+  const usdc = new ethers.Contract(mUsdZkevmAddr, mUsdZkevmAbi, provider);
+  const signerBalance = ethers.utils.formatUnits(
+    await usdc.balanceOf(signerAddress),
+    8
+  );
+
+  return { signerBalance };
+}
 export async function checkUserBalanceAmoyWeb3Auth(smartAccount: any) {
   const provider = new ethers.providers.JsonRpcProvider(
     'https://rpc-amoy.polygon.technology'
   );
-  const signerAddress = await smartAccount.getAddress();
+  const signerAddress = await smartAccount.getAccountAddress();
   const usdc = new ethers.Contract(usdcAmoyAddr, UsdcAvaAbi, provider);
   const signerBalance = ethers.utils.formatUnits(
     await usdc.balanceOf(signerAddress),
-    8
+    6
   );
 
   return { signerBalance };
@@ -443,11 +466,30 @@ export async function getTestFunds(provider: any) {
   const trx = await mockUsd.transfer(signerAddress, 1000e8);
   return { trxhash: trx.hash };
 }
+export async function getTestFundsZkEvm(smartAccount: any) {
+  const provider = new ethers.providers.JsonRpcProvider(
+    'https://rpc.cardona.zkevm-rpc.com'
+  );
+  const signerAddress = await smartAccount.getAccountAddress();
+  const thirdPartyProvider = new ethers.Wallet(
+    process.env.NEXT_PUBLIC_THIRD_PARTY_SIGNER || '',
+    provider
+  );
+  console.log(thirdPartyProvider);
+  const usdc = new ethers.Contract(
+    mUsdZkevmAddr,
+    mUsdZkevmAbi,
+    thirdPartyProvider
+  );
+  const trx = await usdc.transfer(signerAddress, 100e8);
+  return { trxhash: trx.hash };
+}
+
 export async function getTestFundsWeb3Auth(smartAccount: any) {
   const provider = new ethers.providers.JsonRpcProvider(
     'https://eth-sepolia.public.blastapi.io'
   );
-  const signerAddress = await smartAccount.getAddress();
+  const signerAddress = await smartAccount.getAccountAddress();
   const thirdPartyProvider = new ethers.Wallet(
     process.env.NEXT_PUBLIC_THIRD_PARTY_SIGNER || '',
     provider
@@ -1059,4 +1101,296 @@ export async function chainLinkAutomationSubscription(
   } catch (error) {
     console.error('Error in PurchaseSubscription in nftAutomation', error);
   }
+}
+
+export async function listNft(
+  smartAccount: any,
+  tokenIdString: string,
+  priceInUsdString: any
+) {
+  console.log('Starting listNft');
+  // Initialize provider
+  const provider = new ethers.providers.JsonRpcProvider(
+    'https://eth-sepolia.public.blastapi.io'
+  );
+  // Initialize NFT and Marketplace contract instances
+  const nftContractInstance = new ethers.Contract(
+    blockTeaseNftAddr,
+    blockTeaseNftAbi,
+    provider
+  );
+  const marketplaceContractInstance = new ethers.Contract(
+    nftAutomationAddr,
+    nftAutomationAbi,
+    provider
+  );
+
+  // Convert string inputs to appropriate data types
+  const cnvtTokenId = ethers.BigNumber.from(tokenIdString);
+  const priceInUsdc = ethers.utils.parseUnits(priceInUsdString.toString(), 8); // Assuming USDc has 8 decimal places
+
+  console.log(
+    `Listing NFT with ID: ${cnvtTokenId.toString()} at price: ${priceInUsdString} USD`
+  );
+
+  try {
+    // Step 1: Approve the marketplace contract to manage the NFT
+    const approvalTx =
+      await nftContractInstance.populateTransaction.setApprovalForAll(
+        nftAutomationAddr,
+        true
+      );
+    const approvalTransaction = {
+      to: blockTeaseNftAddr,
+      data: approvalTx.data,
+    };
+    console.log('Approval transaction for NFT transfer created');
+
+    // Step 2: Create the listing transaction
+    const listTx =
+      await marketplaceContractInstance.populateTransaction.listNft(
+        cnvtTokenId,
+        priceInUsdc
+      );
+    const listTransaction = { to: nftAutomationAddr, data: listTx.data };
+    console.log('NFT listing transaction created');
+
+    // Bundle transactions
+    const transactions = [approvalTransaction, listTransaction];
+    console.log('Transactions bundled', transactions);
+
+    // Send Transactions
+    console.log('Sending bundled transactions through SmartAccount...');
+    const bundleTransaction = await smartAccount.sendTransaction(transactions, {
+      paymasterServiceData: { mode: PaymasterMode.SPONSORED },
+    });
+    console.log('Bundle transaction sent');
+    const listingId = await marketplaceContractInstance.listingId();
+    const { transactionHash } = await bundleTransaction.waitForTxHash();
+    console.log('Listing Transaction Hash:', transactionHash);
+
+    return { hash: transactionHash, listingId: listingId.toString() };
+  } catch (error) {
+    console.error('Error in listing NFT:', error);
+    throw error;
+  }
+}
+
+export async function buyNft(
+  smartAccount: any,
+  listingId: any,
+  priceInUsd: any
+) {
+  console.log('Starting buyNft');
+  const provider = new ethers.providers.JsonRpcProvider(
+    'https://eth-sepolia.public.blastapi.io'
+  );
+  const usdcContractInstance = new ethers.Contract(
+    usdcSepoliaEthAddr,
+    UsdcEthSepoliaAbi,
+    provider
+  );
+  const nftMarketplaceInstance = new ethers.Contract(
+    nftAutomationAddr,
+    nftAutomationAbi,
+    provider
+  );
+
+  const approvalUsdc = ethers.utils.parseUnits(priceInUsd, 8);
+  console.log(`Approving USDC: ${approvalUsdc}`);
+
+  // Approve USDC spending
+  const approvalTx = await usdcContractInstance.populateTransaction.approve(
+    nftAutomationAddr,
+    approvalUsdc
+  );
+  const approvalTransaction = { to: usdcSepoliaEthAddr, data: approvalTx.data };
+
+  // Buy NFT
+  const buyTx = await nftMarketplaceInstance.populateTransaction.buyNft(
+    listingId
+  );
+  const buyTransaction = { to: nftAutomationAddr, data: buyTx.data };
+
+  // Send Transactions
+  const transactions = [approvalTransaction, buyTransaction];
+  console.log('Sending bundled transactions through SmartAccount...');
+  const bundleTransaction = await smartAccount.sendTransaction(transactions, {
+    paymasterServiceData: { mode: PaymasterMode.SPONSORED },
+  });
+
+  const { transactionHash } = await bundleTransaction.waitForTxHash();
+  console.log('Transaction Hash:', transactionHash);
+  return { hash: transactionHash };
+}
+
+export async function listNftZkevm(
+  smartAccount: any,
+  tokenId: any,
+  priceInUsd: any
+) {
+  console.log('Starting listNft');
+  const provider = new ethers.providers.JsonRpcProvider(
+    'https://rpc.cardona.zkevm-rpc.com'
+  );
+  const nftContractInstance = new ethers.Contract(
+    blockTeaseNftZkevmAddr,
+    blockTeaseNftZkevmAbi,
+    provider
+  );
+  const marketplaceContractInstance = new ethers.Contract(
+    marketplaceZkevmAddr,
+    markeplaceZkevmAbi,
+    provider
+  );
+  const owner = await smartAccount.getAccountAddress();
+  // Check if approval is needed and prepare approval transaction
+  const isApproved = await nftContractInstance.isApprovedForAll(
+    owner,
+    marketplaceZkevmAddr
+  );
+  const transactions = [];
+
+  if (!isApproved) {
+    const approvalTx =
+      await nftContractInstance.populateTransaction.setApprovalForAll(
+        marketplaceZkevmAddr,
+        true
+      );
+    transactions.push({ to: blockTeaseNftZkevmAddr, data: approvalTx.data });
+  }
+
+  // Prepare listing transaction
+  const priceInUsdc = ethers.utils.parseUnits(priceInUsd.toString(), 8);
+  const listTx = await marketplaceContractInstance.populateTransaction.listNFT(
+    tokenId,
+    priceInUsdc
+  );
+  transactions.push({ to: marketplaceZkevmAddr, data: listTx.data });
+
+  // Bundle and send transactions
+  console.log('Sending bundled transactions through SmartAccount...');
+  const bundleTransaction = await smartAccount.sendTransaction(transactions, {
+    paymasterServiceData: { mode: PaymasterMode.SPONSORED },
+  });
+
+  const { transactionHash } = await bundleTransaction.waitForTxHash();
+  console.log('Listing Transaction Hash:', transactionHash);
+  return { hash: transactionHash };
+}
+
+export async function buyNftWithUsdcZkevm(
+  smartAccount: any,
+  tokenId: any,
+  priceInUsd: any
+) {
+  console.log('Starting buyNftWithUsdc');
+  const provider = new ethers.providers.JsonRpcProvider(
+    'https://rpc.cardona.zkevm-rpc.com'
+  );
+  const usdcContractInstance = new ethers.Contract(
+    mUsdZkevmAddr,
+    mUsdZkevmAbi,
+    provider
+  );
+  const nftMarketplaceInstance = new ethers.Contract(
+    marketplaceZkevmAddr,
+    markeplaceZkevmAbi,
+    provider
+  );
+  const owner = await smartAccount.getAccountAddress();
+  const priceInUsdc = ethers.utils.parseUnits(priceInUsd.toString(), 8);
+  const transactions = [];
+
+  // Check allowance and prepare approval transaction if necessary
+  const currentAllowance = await usdcContractInstance.allowance(
+    owner,
+    marketplaceZkevmAddr
+  );
+  if (currentAllowance.lt(priceInUsdc)) {
+    const approvalTx = await usdcContractInstance.populateTransaction.approve(
+      marketplaceZkevmAddr,
+      priceInUsdc
+    );
+    transactions.push({ to: mUsdZkevmAddr, data: approvalTx.data });
+  }
+
+  // Prepare buy transaction
+  const buyTx = await nftMarketplaceInstance.populateTransaction.buyNFTWithUSDC(
+    tokenId
+  );
+  transactions.push({ to: marketplaceZkevmAddr, data: buyTx.data });
+
+  // Bundle and send transactions
+  console.log('Sending bundled transactions through SmartAccount...');
+  const bundleTransaction = await smartAccount.sendTransaction(transactions, {
+    paymasterServiceData: { mode: PaymasterMode.SPONSORED },
+  });
+
+  const { transactionHash } = await bundleTransaction.waitForTxHash();
+  console.log('Buy Transaction Hash:', transactionHash);
+  return { hash: transactionHash };
+}
+
+export async function purchaseSubscriptionZkevm(
+  smartAccount: any,
+  modelId: any,
+  subscriptionId: any,
+  priceInUsd: any,
+  duration: any
+) {
+  console.log('Starting purchaseSubscription');
+  const provider = new ethers.providers.JsonRpcProvider(
+    'https://rpc.cardona.zkevm-rpc.com'
+  );
+  const subscriptionContract = new ethers.Contract(
+    marketplaceZkevmAddr,
+    markeplaceZkevmAbi,
+    provider
+  );
+  const paymentTokenInstance = new ethers.Contract(
+    mUsdZkevmAddr,
+    mUsdZkevmAbi,
+    provider
+  );
+  const owner = await smartAccount.getAccountAddress();
+  const model = await subscriptionContract.models(modelId);
+  const priceInUsdc = model.priceUSD; // price is in Wei
+  const transactions = [];
+
+  // Check allowance and prepare approval transaction if necessary
+  // const currentAllowance = await paymentTokenInstance.allowance(
+  //   owner,
+  //   marketplaceZkevmAddr
+  // );
+  // if (currentAllowance.lt(priceInUsdc)) {
+  const approvalAmount = priceInUsd; // 3 times the duration
+  const approvalUsdc = ethers.utils.parseUnits(approvalAmount.toString(), 8);
+  console.log(`Price in USDC: ${approvalUsdc}`);
+
+  const approvalTx = await paymentTokenInstance.populateTransaction.approve(
+    marketplaceZkevmAddr,
+    approvalUsdc
+  );
+  transactions.push({ to: mUsdZkevmAddr, data: approvalTx.data });
+  // }
+
+  // Prepare subscription purchase transaction
+  // const purchaseTx =
+  //   await subscriptionContract.populateTransaction.purchaseSubscription(
+  //     modelId,
+  //     subscriptionId,
+  //     duration
+  //   );
+  // transactions.push({ to: marketplaceZkevmAddr, data: purchaseTx.data });
+
+  // Bundle and send transactions
+  console.log('Sending bundled transactions through SmartAccount...');
+  const bundleTransaction = await smartAccount.sendTransaction(transactions, {
+    paymasterServiceData: { mode: PaymasterMode.SPONSORED },
+  });
+
+  const { transactionHash } = await bundleTransaction.waitForTxHash();
+  console.log('Subscription Purchase Transaction Hash:', transactionHash);
+  return { hash: transactionHash };
 }

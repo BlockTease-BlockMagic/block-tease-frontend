@@ -1,14 +1,15 @@
 'use client';
 
-import { createSmartAccountClient } from '@biconomy/account';
+import { createBundler, createSmartAccountClient } from '@biconomy/account';
 import { CHAIN_NAMESPACES, IProvider, WEB3AUTH_NETWORK } from '@web3auth/base';
 import { EthereumPrivateKeyProvider } from '@web3auth/ethereum-provider';
+import { MetamaskAdapter } from '@web3auth/metamask-adapter';
 import { Web3Auth } from '@web3auth/modal';
 import { OpenloginAdapter } from '@web3auth/openlogin-adapter';
 import { ethers } from 'ethers';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { MetamaskAdapter } from '@web3auth/metamask-adapter';
+
 import useGlobalStore from '@/hooks/useGlobalStore';
 const clientId =
   'BEsx8crmOvhVhtiEPU4JbHWOnUGQ_g4TZsWmqUiMWmONwrdqCwuoowH6HJQUUJ-iXPhz8tb8BvVoHWEtF0H_wzQ';
@@ -42,6 +43,15 @@ export const chainConfig = [
     ticker: 'MATIC',
     tickerName: 'Polygon Matic',
   },
+  {
+    chainNamespace: CHAIN_NAMESPACES.OTHER,
+    chainId: "0x98A", // Polygon zkEVM Testnet Chain ID
+    rpcTarget: 'https://rpc.cardona.zkevm-rpc.com',
+    displayName: "Polygon Cardona ", // Display name for the network
+    blockExplorer: "https://cardona-zkevm.polygonscan.com/", // Block Explorer URL
+    ticker: "ETH", // Currency symbol
+    tickerName: "Ethereum" // Currency name
+  },
 ];
 
 const config = [
@@ -59,6 +69,11 @@ const config = [
     biconomyPaymasterApiKey: '8jJqj9r_q.5c04862e-d262-4f69-bb88-ddc7c4d991f0',
     bundlerUrl: `https://bundler.biconomy.io/api/v2/80002/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f44`,
     chainId: 80002,
+  },
+  {
+    biconomyPaymasterApiKey: '9Dfqt1w2i.ebe270ce-61dc-43a9-a9b5-048f2e18ae6d',
+    bundlerUrl: `https://bundler.biconomy.io/api/v2/2442/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f44`,
+    chainId: 2442,
   },
 ];
 
@@ -127,10 +142,25 @@ function useWeb3auth() {
       web3authProvider as any
     );
     const web3AuthSigner = ethersProvider.getSigner();
+    const bundler = await createBundler({
+      bundlerUrl: config[chainIndex].bundlerUrl,
+      userOpReceiptIntervals: {
+        [config[chainIndex].chainId]: 30000
+      },
+      userOpWaitForTxHashIntervals: {
+        [config[chainIndex].chainId]: 30000
+      },
+      userOpReceiptMaxDurationIntervals: {
+        [config[chainIndex].chainId]: 30000
+      },
+      userOpWaitForTxHashMaxDurationIntervals: {
+        [config[chainIndex].chainId]: 30000
+      }
+    })
     const smartWallet = await createSmartAccountClient({
       signer: web3AuthSigner,
       biconomyPaymasterApiKey: config[chainIndex].biconomyPaymasterApiKey,
-      bundlerUrl: config[chainIndex].bundlerUrl,
+      bundler: bundler,
       rpcUrl: chainConfig[chainIndex].rpcTarget,
       chainId: config[chainIndex].chainId,
     });
